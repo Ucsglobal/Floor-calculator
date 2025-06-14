@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floor Measurement Calculator</title>
+    <style>
+        /* Basic reset for consistent styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body styling: full height, gradient background, Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Main container for the application */
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        /* Toolbar styling */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+            min-height: 70px;
+        }
+
+        /* File input wrapper for custom styling */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            gap: 8px;
+        }
+
+        .file-input-wrapper:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        /* General button styling */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn.active {
+            transform: scale(0.95);
+            box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Zoom controls container */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .zoom-slider {
+            width: 120px;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            outline: none;
+            cursor: grab;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            margin-top: -6px;
+        }
+
+        .zoom-value {
+            font-weight: bold;
+            color: #333;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        /* Canvas container */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+
+        .canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: grab;
+            transition: cursor 0.2s ease;
+            touch-action: none;
+        }
+
+        .canvas.measuring {
+            cursor: crosshair;
+        }
+
+        .canvas.dragging {
+            cursor: grabbing;
+        }
+
+        /* Measurements panel */
+        .measurements-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            min-width: 300px;
+            max-height: calc(100% - 40px);
+            overflow-y: auto;
+            z-index: 500;
+        }
+
+        .measurement-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: linear-gradient(45deg, #f1f3f4, #e8eaf6);
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .measurement-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .measurement-area {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .measurement-delete {
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .measurement-delete:hover {
+            background: #ff3742;
+            transform: scale(1.1);
+        }
+
+        .total-area {
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .calibration-info {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+            color: #333;
+        }
+
+        .calibration-info select {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fff;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .notification.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .notification.error {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+
+        .notification.info {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .calibration-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .calibration-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            min-width: 300px;
+        }
+
+        .calibration-content h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .calibration-content p {
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        .calibration-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .calibration-input input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 120px;
+            text-align: center;
+        }
+
+        .calibration-input input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .calibration-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .modal-btn.secondary {
+            background: #ddd;
+            color: #333;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .welcome-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+            font-size: 18px;
+            z-index: 100;
+        }
+
+        .welcome-message h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <label for="fileInput" class="file-input-wrapper" title="Load PDF floor plans or image files">
+                <input type="file" id="fileInput" class="file-input" accept=".pdf,.png,.jpg,.jpeg,.gif,.bmp,.webp" />
+                📁 Load PDF or Image
+            </label>
+            
+            <button id="panBtn" class="btn btn-primary active" title="Pan around the loaded drawing">
+                🖐️ Pan
+            </button>
+            
+            <button id="measureBtn" class="btn btn-secondary" title="Click to add points, double-click or Esc to finish an area measurement">
+                📐 Measure
+            </button>
+            
+            <button id="calibrateBtn" class="btn btn-secondary" title="Click two points to set a known distance for calibration">
+                📏 Calibrate
+            </button>
+            
+            <button id="undoBtn" class="btn btn-danger" title="Remove the last point added to the current measurement">
+                ↶ Undo Point
+            </button>
+            
+            <button id="clearBtn" class="btn btn-danger" title="Clear all measurements and reset the view">
+                🗑️ Clear All
+            </button>
+            
+            <div class="calibration-info" id="calibrationInfo" style="display: none;">
+                <span>Scale: </span>
+                <span id="scaleDisplay">Not calibrated</span>
+                <select id="unitSelect" style="margin-left: 10px;">
+                    <option value="m">meters</option>
+                    <option value="ft">feet</option>
+                    <option value="cm">cm</option>
+                    <option value="in">inches</option>
+                </select>
+            </div>
+
+            <div class="zoom-controls">
+                <span>Zoom:</span>
+                <input type="range" id="zoomSlider" class="zoom-slider" min="0.1" max="3" step="0.1" value="1">
+                <span class="zoom-value" id="zoomValue">100%</span>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas" class="canvas"></canvas>
+            
+            <div class="welcome-message" id="welcomeMessage">
+                <h2>📐 Floor Measurement Calculator</h2>
+                <p>Load a PDF floor plan or image to start measuring areas</p>
+                <p>✓ Supports: PDF, JPG, PNG, GIF, and other image formats</p>
+                <p>📏 Transparent green overlays preserve plan visibility</p>
+                <p>Use the calibration tool to ensure accurate measurements</p>
+            </div>
+            
+            <div class="measurements-panel" id="measurementsPanel" style="display: none;">
+                <h3 style="margin-bottom: 15px; color: #333;">📏 Measurements</h3>
+                <div id="measurementsList"></div>
+                <div class="total-area">
+                    Total Area: <span id="totalArea">0.00 m²</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Processing file...</p>
+        </div>
+    </div>
+
+    <div class="calibration-modal" id="calibrationModal">
+        <div class="calibration-content">
+            <h3>📏 Set Calibration Distance</h3>
+            <p>Enter the real-world distance between the two points you clicked:</p>
+            <div class="calibration-input">
+                <input type="number" id="calibrationDistance" placeholder="Distance" step="0.01" min="0.01">
+                <select id="calibrationUnit">
+                    <option value="m">meters</option>
+                    <option value="ft">feet</option>
+                    <option value="cm">cm</option>
+                    <option value="in">inches</option>
+                </select>
+            </div>
+            <div class="calibration-buttons">
+                <button class="modal-btn primary" onclick="calculator.confirmCalibration()">✓ Set Scale</button>
+                <button class="modal-btn secondary" onclick="calculator.cancelCalibration()">✗ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF.js library for PDF rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        class FloorMeasurementCalculator {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.mode = 'pan'; // 'pan', 'measure', or 'calibrate'
+                this.measurements = [];
+                this.currentPolygon = [];
+                this.calibrationPoints = [];
+                this.calibrationScale = null; // pixels per unit
+                this.isDragging = false;
+                this.dragStart = { x: 0, y: 0 };
+                this.offset = { x: 0, y: 0 };
+                this.zoom = 1;
+                this.image = null;
+                this.imageLoaded = false;
+                
+                this.initEventListeners();
+                this.resizeCanvas();
+                this.updateDisplay();
+                this.updateCalibrationDisplay();
+            }
+
+            initEventListeners() {
+                // File input
+                document.getElementById('fileInput').addEventListener('change', (e) => this.loadFile(e));
+                
+                // Mode buttons
+                document.getElementById('panBtn').addEventListener('click', () => this.setMode('pan'));
+                document.getElementById('measureBtn').addEventListener('click', () => this.setMode('measure'));
+                document.getElementById('calibrateBtn').addEventListener('click', () => this.setMode('calibrate'));
+                
+                // Action buttons
+                document.getElementById('undoBtn').addEventListener('click', () => this.undoLastPoint());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearAll());
+                
+                // Zoom controls (only slider, no mouse wheel)
+                document.getElementById('zoomSlider').addEventListener('input', (e) => this.setZoom(parseFloat(e.target.value)));
+                
+                // Unit selection
+                document.getElementById('unitSelect').addEventListener('change', () => this.updateMeasurementsPanel());
+                
+                // Canvas events
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
+                
+                // Global mouse events to handle mouse leaving canvas during drag
+                document.addEventListener('mouseup', (e) => this.handleGlobalMouseUp(e));
+                document.addEventListener('mousemove', (e) => this.handleGlobalMouseMove(e));
+                
+                // Keyboard events
+                document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+                
+                // Window resize
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            loadFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                this.showLoading();
+
+                if (file.type.startsWith('image/')) {
+                    this.loadImage(file);
+                } else if (file.type === 'application/pdf') {
+                    this.loadPDF(file);
+                } else {
+                    this.hideLoading();
+                    this.showNotification('Unsupported file type. Please use PDF or image files.', 'error');
+                }
+            }
+
+            showLoading() {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+            }
+
+            hideLoading() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+
+            loadPDF(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const typedarray = new Uint8Array(e.target.result);
+                    
+                    // Configure PDF.js worker
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    
+                    pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
+                        // Check if PDF has multiple pages
+                        if (pdf.numPages > 1) {
+                            this.showNotification(`PDF has ${pdf.numPages} pages. Loading first page only.`, 'info');
+                        }
+                        
+                        // Get the first page (most floor plans are single page)
+                        pdf.getPage(1).then((page) => {
+                            // Set scale for good quality (2.0 = 200% of original size)
+                            const scale = 2.0;
+                            const viewport = page.getViewport({ scale });
+                            
+                            // Create a temporary canvas to render the PDF
+                            const tempCanvas = document.createElement('canvas');
+                            const tempContext = tempCanvas.getContext('2d');
+                            tempCanvas.height = viewport.height;
+                            tempCanvas.width = viewport.width;
+                            
+                            const renderContext = {
+                                canvasContext: tempContext,
+                                viewport: viewport
+                            };
+                            
+                            page.render(renderContext).promise.then(() => {
+                                // Convert the rendered PDF canvas to an image
+                                this.image = new Image();
+                                this.image.onload = () => {
+                                    this.imageLoaded = true;
+                                    this.fitImageToCanvas();
+                                    this.clearAll();
+                                    this.updateDisplay();
+                                    document.getElementById('welcomeMessage').style.display = 'none';
+                                    this.hideLoading();
+                                    this.showNotification('PDF loaded successfully!');
+                                };
+                                this.image.src = tempCanvas.toDataURL();
+                            });
+                        });
+                    }).catch((error) => {
+                        console.error('Error loading PDF:', error);
+                        this.hideLoading();
+                        this.showNotification('Error loading PDF. Please try a different file.', 'error');
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            loadImage(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.image = new Image();
+                    this.image.onload = () => {
+                        this.imageLoaded = true;
+                        this.fitImageToCanvas();
+                        this.clearAll();
+                        this.updateDisplay();
+                        document.getElementById('welcomeMessage').style.display = 'none';
+                        this.hideLoading();
+                        this.showNotification('Image loaded successfully!');
+                    };
+                    this.image.onerror = () => {
+                        this.hideLoading();
+                        this.showNotification('Error loading image. Please try a different file.', 'error');
+                    };
+                    this.image.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            fitImageToCanvas() {
+                if (!this.image) return;
+                
+                const containerRect = this.canvas.parentElement.getBoundingClientRect();
+                const imageAspect = this.image.width / this.image.height;
+                const containerAspect = containerRect.width / containerRect.height;
+                
+                if (imageAspect > containerAspect) {
+                    this.zoom = containerRect.width / this.image.width * 0.8;
+                } else {
+                    this.zoom = containerRect.height / this.image.height * 0.8;
+                }
+                
+                this.offset.x = (this.canvas.width - this.image.width * this.zoom) / 2;
+                this.offset.y = (this.canvas.height - this.image.height * this.zoom) / 2;
+                
+                document.getElementById('zoomSlider').value = this.zoom;
+                this.updateZoomDisplay();
+            }
+
+            setMode(mode) {
+                // Check if image is loaded for measurement/calibration modes
+                if ((mode === 'measure' || mode === 'calibrate') && !this.imageLoaded) {
+                    this.showNotification('Please load an image or PDF first', 'error');
+                    return;
+                }
+                
+                // Finish any current operation
+                if (this.mode === 'measure' && this.currentPolygon.length > 0) {
+                    this.finishCurrentMeasurement();
+                }
+                if (this.mode === 'calibrate' && this.calibrationPoints.length > 0) {
+                    this.calibrationPoints = [];
+                }
+
+                this.mode = mode;
+                
+                // Update button states
+                document.getElementById('panBtn').classList.toggle('active', mode === 'pan');
+                document.getElementById('measureBtn').classList.toggle('active', mode === 'measure');
+                document.getElementById('calibrateBtn').classList.toggle('active', mode === 'calibrate');
+                
+                // Update cursor
+                let cursorClass = '';
+                if (mode === 'measure') cursorClass = 'measuring';
+                else if (mode === 'calibrate') cursorClass = 'measuring';
+                
+                this.canvas.className = `canvas ${cursorClass}`;
+                
+                // Show/hide relevant UI
+                if (mode === 'calibrate') {
+                    this.showNotification('Click two points on the image with a known distance (e.g., door width)', 'info');
+                }
+                
+                this.updateDisplay();
+            }
+
+            handleMouseDown(event) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                if (this.mode === 'pan') {
+                    this.isDragging = true;
+                    this.dragStart = { x: x - this.offset.x, y: y - this.offset.y };
+                    this.canvas.classList.add('dragging');
+                } else if (this.mode === 'measure') {
+                    this.addMeasurementPoint(x, y);
+                } else if (this.mode === 'calibrate') {
+                    this.addCalibrationPoint(x, y);
+                }
+            }
+
+            handleMouseMove(event) {
+                if (!this.isDragging || this.mode !== 'pan') return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                this.offset.x = x - this.dragStart.x;
+                this.offset.y = y - this.dragStart.y;
+                this.updateDisplay();
+            }
+
+            handleGlobalMouseMove(event) {
+                if (!this.isDragging || this.mode !== 'pan') return;
+                
+                // Handle panning even when mouse moves outside canvas
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                this.offset.x = x - this.dragStart.x;
+                this.offset.y = y - this.dragStart.y;
+                this.updateDisplay();
+            }
+
+            handleMouseUp(event) {
+                if (this.isDragging && this.mode === 'pan') {
+                    this.isDragging = false;
+                    this.canvas.classList.remove('dragging');
+                }
+            }
+
+            handleGlobalMouseUp(event) {
+                // Ensure dragging stops even if mouse is released outside canvas
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.canvas.classList.remove('dragging');
+                }
+            }
+
+            handleDoubleClick(event) {
+                if (this.mode === 'measure' && this.currentPolygon.length >= 3) {
+                    this.finishCurrentMeasurement();
+                }
+            }
+
+            handleKeyDown(event) {
+                if (event.key === 'Escape') {
+                    if (this.mode === 'measure' && this.currentPolygon.length >= 3) {
+                        this.finishCurrentMeasurement();
+                    } else if (this.mode === 'calibrate') {
+                        this.calibrationPoints = [];
+                        this.setMode('pan');
+                    }
+                }
+            }
+
+            addMeasurementPoint(x, y) {
+                // Convert canvas coordinates to image coordinates for accurate measurements
+                const imageCoords = this.canvasToImageCoordinates(x, y);
+                
+                if (imageCoords && this.image) {
+                    this.currentPolygon.push({ 
+                        canvas: { x, y }, 
+                        image: imageCoords 
+                    });
+                    this.updateDisplay();
+                    this.updateMeasurementsPanel();
+                } else {
+                    this.showNotification('Please click on the image, not the background', 'error');
+                }
+            }
+
+            addCalibrationPoint(x, y) {
+                // Convert canvas coordinates to image coordinates
+                const imageCoords = this.canvasToImageCoordinates(x, y);
+                
+                // Only add point if it's within the image bounds
+                if (imageCoords && this.image) {
+                    this.calibrationPoints.push({ 
+                        canvas: { x, y }, 
+                        image: imageCoords 
+                    });
+                    
+                    if (this.calibrationPoints.length === 2) {
+                        // Calculate pixel distance in IMAGE coordinates (not canvas)
+                        const dx = this.calibrationPoints[1].image.x - this.calibrationPoints[0].image.x;
+                        const dy = this.calibrationPoints[1].image.y - this.calibrationPoints[0].image.y;
+                        this.pendingPixelDistance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Show modal for distance input
+                        this.showCalibrationModal();
+                    } else {
+                        this.showNotification('Click the second point to complete calibration');
+                    }
+                } else {
+                    this.showNotification('Please click on the image, not the background', 'error');
+                }
+                
+                this.updateDisplay();
+            }
+
+            canvasToImageCoordinates(canvasX, canvasY) {
+                if (!this.image || !this.imageLoaded) return null;
+                
+                // Convert from canvas coordinates to image coordinates
+                const imageX = (canvasX - this.offset.x) / this.zoom;
+                const imageY = (canvasY - this.offset.y) / this.zoom;
+                
+                // Check if coordinates are within image bounds
+                if (imageX >= 0 && imageY >= 0 && imageX <= this.image.width && imageY <= this.image.height) {
+                    return { x: imageX, y: imageY };
+                }
+                
+                return null; // Point is outside image
+            }
+
+            imageToCanvasCoordinates(imageX, imageY) {
+                const canvasX = imageX * this.zoom + this.offset.x;
+                const canvasY = imageY * this.zoom + this.offset.y;
+                return { x: canvasX, y: canvasY };
+            }
+
+            showCalibrationModal() {
+                const modal = document.getElementById('calibrationModal');
+                const input = document.getElementById('calibrationDistance');
+                const unitSelect = document.getElementById('calibrationUnit');
+                
+                // Set unit to match current selection
+                unitSelect.value = document.getElementById('unitSelect').value;
+                
+                // Clear and focus input
+                input.value = '';
+                modal.style.display = 'flex';
+                setTimeout(() => input.focus(), 100);
+                
+                // Handle Enter key in input
+                input.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        this.confirmCalibration();
+                    } else if (e.key === 'Escape') {
+                        this.cancelCalibration();
+                    }
+                };
+            }
+
+            confirmCalibration() {
+                const distanceInput = document.getElementById('calibrationDistance');
+                const unitSelect = document.getElementById('calibrationUnit');
+                const realDistance = parseFloat(distanceInput.value);
+                
+                if (realDistance && !isNaN(realDistance) && realDistance > 0) {
+                    this.calibrationScale = this.pendingPixelDistance / realDistance;
+                    
+                    // Update main unit selector to match calibration unit
+                    document.getElementById('unitSelect').value = unitSelect.value;
+                    
+                    this.updateCalibrationDisplay();
+                    this.hideCalibrationModal();
+                    this.showNotification('Calibration set successfully!');
+                    this.setMode('pan'); // Return to pan mode
+                } else {
+                    this.showNotification('Please enter a valid distance greater than 0', 'error');
+                    distanceInput.focus();
+                }
+            }
+
+            cancelCalibration() {
+                this.calibrationPoints = [];
+                this.hideCalibrationModal();
+                this.updateDisplay();
+                this.showNotification('Calibration cancelled');
+                this.setMode('pan');
+            }
+
+            hideCalibrationModal() {
+                document.getElementById('calibrationModal').style.display = 'none';
+            }
+
+            updateCalibrationDisplay() {
+                const display = document.getElementById('scaleDisplay');
+                const info = document.getElementById('calibrationInfo');
+                
+                if (this.calibrationScale) {
+                    const unit = document.getElementById('unitSelect').value;
+                    display.textContent = `1 ${unit} = ${this.calibrationScale.toFixed(1)} image pixels`;
+                    info.style.display = 'flex';
+                } else {
+                    display.textContent = 'Not calibrated - measurements may be inaccurate';
+                    info.style.display = 'flex'; // Always show to remind users
+                }
+            }
+
+            undoLastPoint() {
+                if (this.mode === 'measure' && this.currentPolygon.length > 0) {
+                    this.currentPolygon.pop();
+                    this.updateDisplay();
+                } else if (this.mode === 'calibrate' && this.calibrationPoints.length > 0) {
+                    this.calibrationPoints.pop();
+                    this.updateDisplay();
+                }
+            }
+
+            finishCurrentMeasurement() {
+                if (this.currentPolygon.length >= 3) {
+                    this.measurements.push([...this.currentPolygon]);
+                    this.currentPolygon = [];
+                    this.updateDisplay();
+                    this.updateMeasurementsPanel();
+                    this.showNotification('Area measurement added!');
+                }
+            }
+
+            clearAll() {
+                this.measurements = [];
+                this.currentPolygon = [];
+                this.calibrationPoints = [];
+                // Note: We keep the calibration scale so users don't have to recalibrate
+                // unless they explicitly want to
+                this.updateDisplay();
+                this.updateMeasurementsPanel();
+                this.hideCalibrationModal(); // Close modal if open
+                
+                if (this.calibrationScale) {
+                    this.showNotification('Measurements cleared. Calibration preserved.');
+                } else {
+                    this.showNotification('All data cleared. Please calibrate for accurate measurements.');
+                }
+            }
+
+            setZoom(zoom) {
+                this.zoom = zoom;
+                document.getElementById('zoomSlider').value = zoom;
+                this.updateZoomDisplay();
+                this.updateDisplay();
+            }
+
+            updateZoomDisplay() {
+                document.getElementById('zoomValue').textContent = Math.round(this.zoom * 100) + '%';
+            }
+
+            getScale() {
+                const unit = document.getElementById('unitSelect').value;
+                return {
+                    scalePixels: this.calibrationScale || 50, // fallback
+                    scaleRealWorld: 1,
+                    unit: unit
+                };
+            }
+
+            convertPixelAreaToRealArea(pixelArea) {
+                if (!this.calibrationScale) {
+                    this.showNotification('Please calibrate the scale first', 'error');
+                    return 0;
+                }
+                
+                const realAreaPerPixel = (1 / this.calibrationScale) ** 2;
+                return pixelArea * realAreaPerPixel;
+            }
+
+            calculatePolygonArea(polygon) {
+                if (polygon.length < 3) return 0;
+
+                let area = 0;
+                for (let i = 0; i < polygon.length; i++) {
+                    const j = (i + 1) % polygon.length;
+                    // Use image coordinates for accurate area calculation
+                    const point1 = polygon[i].image || polygon[i]; // Support both old and new format
+                    const point2 = polygon[j].image || polygon[j];
+                    
+                    area += point1.x * point2.y;
+                    area -= point2.x * point1.y;
+                }
+                return Math.abs(area) / 2;
+            }
+
+            formatArea(area, unit) {
+                const unitSymbol = {
+                    'm': 'm²',
+                    'ft': 'ft²',
+                    'cm': 'cm²',
+                    'in': 'in²'
+                };
+                return `${area.toFixed(2)} ${unitSymbol[unit]}`;
+            }
+
+            updateMeasurementsPanel() {
+                const panel = document.getElementById('measurementsPanel');
+                const list = document.getElementById('measurementsList');
+                const totalAreaSpan = document.getElementById('totalArea');
+                
+                list.innerHTML = '';
+                let totalPixelArea = 0;
+
+                this.measurements.forEach((measurement, index) => {
+                    const pixelArea = this.calculatePolygonArea(measurement);
+                    const realArea = this.convertPixelAreaToRealArea(pixelArea);
+                    totalPixelArea += pixelArea;
+
+                    const item = document.createElement('div');
+                    item.className = 'measurement-item';
+                    item.innerHTML = `
+                        <span class="measurement-area">Area ${index + 1}: ${this.formatArea(realArea, this.getScale().unit)}</span>
+                        <button class="measurement-delete" onclick="calculator.deleteMeasurement(${index})">×</button>
+                    `;
+                    list.appendChild(item);
+                });
+
+                const totalRealArea = this.convertPixelAreaToRealArea(totalPixelArea);
+                totalAreaSpan.textContent = this.formatArea(totalRealArea, this.getScale().unit);
+
+                panel.style.display = this.measurements.length > 0 ? 'block' : 'none';
+            }
+
+            deleteMeasurement(index) {
+                this.measurements.splice(index, 1);
+                this.updateDisplay();
+                this.updateMeasurementsPanel();
+            }
+
+            resizeCanvas() {
+                const container = this.canvas.parentElement;
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw image if loaded
+                if (this.imageLoaded && this.image) {
+                    this.ctx.save();
+                    this.ctx.translate(this.offset.x, this.offset.y);
+                    this.ctx.scale(this.zoom, this.zoom);
+                    this.ctx.drawImage(this.image, 0, 0);
+                    this.ctx.restore();
+                }
+
+                // Draw completed measurements
+                this.measurements.forEach((measurement, index) => {
+                    this.drawPolygon(measurement, `hsl(${index * 50}, 70%, 50%)`, true, false);
+                });
+
+                // Draw current measurement in progress
+                if (this.currentPolygon.length > 0) {
+                    this.drawPolygon(this.currentPolygon, '#ff6b6b', false, true);
+                }
+
+                // Draw calibration points and line
+                if (this.calibrationPoints.length > 0) {
+                    this.drawCalibrationPoints();
+                }
+            }
+
+            drawCalibrationPoints() {
+                this.ctx.save();
+                
+                // Draw points at their canvas positions
+                this.calibrationPoints.forEach((point, index) => {
+                    const canvasPos = point.canvas || point; // Support both formats
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(canvasPos.x, canvasPos.y, 6, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#ff6b6b';
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    // Add number label
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.font = 'bold 12px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText((index + 1).toString(), canvasPos.x, canvasPos.y + 4);
+                });
+                
+                // Draw line between points
+                if (this.calibrationPoints.length === 2) {
+                    const point1 = this.calibrationPoints[0].canvas || this.calibrationPoints[0];
+                    const point2 = this.calibrationPoints[1].canvas || this.calibrationPoints[1];
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(point1.x, point1.y);
+                    this.ctx.lineTo(point2.x, point2.y);
+                    this.ctx.strokeStyle = '#ff6b6b';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.setLineDash([10, 5]);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                    
+                    // Show distance info
+                    const midX = (point1.x + point2.x) / 2;
+                    const midY = (point1.y + point2.y) / 2;
+                    this.ctx.fillStyle = '#ff6b6b';
+                    this.ctx.font = 'bold 14px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('Calibration Distance', midX, midY - 10);
+                }
+                
+                this.ctx.restore();
+            }
+
+            drawPolygon(points, color, filled, isWorkInProgress = false) {
+                if (points.length === 0) return;
+
+                this.ctx.save();
+                this.ctx.strokeStyle = color;
+                
+                // Different fill colors for completed vs work-in-progress areas
+                if (isWorkInProgress) {
+                    this.ctx.fillStyle = 'rgba(255, 107, 107, 0.15)'; // Light red for work in progress
+                } else {
+                    this.ctx.fillStyle = filled ? 'rgba(46, 204, 113, 0.25)' : 'rgba(46, 204, 113, 0.15)'; // Transparent green for completed
+                }
+                
+                this.ctx.lineWidth = 2;
+
+                this.ctx.beginPath();
+                
+                // Convert all points from image coordinates to current canvas coordinates
+                const canvasPoints = points.map(point => {
+                    if (point.image) {
+                        // Convert image coordinates to current canvas coordinates
+                        return this.imageToCanvasCoordinates(point.image.x, point.image.y);
+                    } else {
+                        // Fallback for old format (shouldn't happen with new code)
+                        return { x: point.x, y: point.y };
+                    }
+                });
+
+                if (canvasPoints.length > 0) {
+                    this.ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+                    
+                    for (let i = 1; i < canvasPoints.length; i++) {
+                        this.ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
+                    }
+
+                    if (filled && canvasPoints.length >= 3) {
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                    } else if (isWorkInProgress && canvasPoints.length >= 2) {
+                        // Show partial fill for work in progress even if not closed
+                        this.ctx.fill();
+                    }
+                    
+                    this.ctx.stroke();
+
+                    // Draw points with better visibility
+                    canvasPoints.forEach((canvasPos, index) => {
+                        this.ctx.beginPath();
+                        this.ctx.arc(canvasPos.x, canvasPos.y, 4, 0, Math.PI * 2);
+                        this.ctx.fillStyle = color;
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = '#fff';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.stroke();
+                    });
+                }
+
+                this.ctx.restore();
+            }
+
+            showNotification(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification ${type}`;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Initialize the calculator
+        const calculator = new FloorMeasurementCalculator();
+    </script>
+</body>
+</html>
